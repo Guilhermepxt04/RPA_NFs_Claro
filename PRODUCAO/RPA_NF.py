@@ -237,8 +237,6 @@ def extração(): #função para extrair as informações (Total a pagar, Juros,
         print(f"Valor total de juros: R$ {juros}")
     else:
         print("Valor total de juros não encontrado.")
-    
-    print('-'*20)
 
 def upload_drive(file_path): #função para realizar upload no drive
     creds = autenticar()
@@ -250,7 +248,7 @@ def upload_drive(file_path): #função para realizar upload no drive
                 (#, "MG"), (, "CE") ]
 
     #numero de conta e vencimento para nomear a NF
-    global nome_sql
+    global file_name
     global n_conta
     global vencimento
     n_conta = ultimo_arquivo[1].split("_")[0]
@@ -265,11 +263,8 @@ def upload_drive(file_path): #função para realizar upload no drive
     #nessa conta são NFs de serviços, mans nas outra sera seguranca
     if login == :   
         file_name = os.path.basename(f"{n_conta}_Claro GR Servico {estado}" + "_" + f"{vencimento}" + "_" + f"ref-{referencia}.pdf") #padrao para NF servico
-        nome_sql = (f"Claro GR Servico {estado}")
     else:       
         file_name = os.path.basename(f"{n_conta}_Claro GR Seguranca {estado}" + "_" + f"{vencimento}" + "_" + f"ref-{referencia}.pdf") #padrao para NF seguranca
-        nome_sql = (f"Claro GR Seguranca {estado}")
-        print(nome_sql)
     
     #chamando a função para checar a pasta no drive e evitar duplicação
     if check_file_exists(file_name) == True:
@@ -301,7 +296,7 @@ def insert_MySQL():
             INSERT INTO {nome_tabela} (
                 conta, nome_nota, valor_total, juros, data_vencimento, ref,  data_emissao, id_drive
             ) VALUES (
-                '{n_conta}', '{nome_sql}', '{valor_total}', '{juros}', '{vencimento}', '{data}', '{data_emissao}', '{file_id}'
+                '{n_conta}', '{file_name}', '{valor_total}', '{juros}', '{vencimento}', '{data}', '{data_emissao}', '{file_id}'
             )
         """)
         db.commit()
