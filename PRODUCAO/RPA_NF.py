@@ -324,7 +324,6 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
         navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[2]/input').send_keys() #preenchendo a senha
         navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[3]/input').click() #dando ok para login
         sleep(3)
-        pyautogui.hotkey("ctrl", "w") #comando para fechar guia pop-up do site
         navegador.switch_to.window(navegador.window_handles[1]) #mudando a aba para ser controlada
         sleep(3)
         navegador.find_element(By.XPATH, '/html/body/table[1]/tbody/tr/td[1]/ul/table/tbody/tr/td[5]/li/a/img').click() #indo para gerenciamento
