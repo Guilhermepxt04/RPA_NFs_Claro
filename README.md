@@ -22,7 +22,7 @@ A parte do lançamento das informações coletadas foi feita de forma seperada
 - Selenium (controle do navegador)
 - Tkinter (GUI)
 - Pyautogui (controle do teclado)
-## BANCO DE DADOS
+## Banco de dados
 - MySQL
 
 ## Controle de versão
