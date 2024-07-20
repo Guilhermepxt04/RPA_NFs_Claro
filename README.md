@@ -16,15 +16,26 @@ A parte do lançamento das informações coletadas foi feita de forma seperada
 - Google Cloud API
 - Regex
 - PymuPDF
+- Dotenv
+- Os
 ## Front end
 - Selenium
 - Tkinter
 - Pyautogui
-## Implantação em produção
-- Banco de dados: MySQL
+## BANCO DE DADOS
+- MySQL
 
-# Metodologia 
-- S.O.L.I.D
+## Controle de versão
+- Git
+- Github
+
+# Metodologias e Principios
+- Desenvolvimento agil
+- TDD (desenvolvimento orientado por testes)
+- Single Responsibility
+- Testes unitários 
+- Testes integrados
+
 
 # Autor
 

@@ -1,6 +1,6 @@
 #
 #
-# Este é o exemplo do codigo do meu projeto de RPA, está versão não está funcional pois falta informações essenciais para rodar
+# Este é o exemplo do codigo do meu projeto de RPA, está versão não está funcional pois faltam informações essenciais para rodar
 #
 #
 
@@ -22,16 +22,59 @@ import re
 import mysql.connector
 import tkinter as tk
 from tkinter import messagebox
+from dotenv import load_dotenv
 
-#GUI para interação com o usuario 
-janela = tk.Tk()
-janela.title("Coleta de Mês para Notas")
+#VARIAVEIS DE AMBIENTE
+load_dotenv(override=True)
 
-rotulo_mes = tk.Label(janela, text="Mês (1 a 12):")
-rotulo_mes.grid(row=0, column=0, padx=5, pady=5)
+#BANCO DE DADOS
+DB_HOST = os.getenv('DB_HOST')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB = os.getenv('DB')
 
-entrada_mes = tk.Entry(janela)
-entrada_mes.grid(row=0, column=1, padx=5, pady=5)
+#API DRIVE
+SHARED_DRIVE_ID = os.getenv('SHARED_DRIVE_ID')
+TOKEN = os.getenv('TOKEN')
+
+#CLARO ONLINE
+CLARO = os.getenv('CLARO')
+
+
+#conexão com banco de dados
+db = mysql.connector.connect(
+    host=DB_HOST,
+    user=DB_USER,
+    password=DB_PASSWORD, 
+    database=DB)
+
+cursor = db.cursor()
+
+
+SCOPES = ["https://www.googleapis.com/auth/drive"] #escopo de permissão que o codigo tem sobre o drive
+SERVICE_ACCOUNT_FILE = TOKEN #token para acesso drive
+SHARED_DRIVE_ID = SHARED_DRIVE_ID #ID da pasta no drive para armazenar as NFs PRECISA SER TROCADO A CADA ANO!!!!
+
+
+#dicionario contendo XPATHs utilizados
+Portal_map = {
+    "buttons": {
+        "download":{
+            "xpath": "/html/body/center/form/table/tbody/tr[6]/td/input"
+        }
+    }
+}
+
+
+pasta_downloads = os.path.join(os.path.expanduser("~"), "Downloads") #declarando automaticamente o caminho até a pasta de downloads de qualquer maquina 
+
+
+#configurando o navegador
+chrome_options = Options()
+chrome_options.add_experimental_option("detach", True)
+#servico = Service(ChromeDriverManager().install()) #instalando o driver atual do chrome de forma automatica
+navegador = webdriver.Chrome(options=chrome_options)
+
 
 def validar_mes():
     try:
@@ -46,71 +89,12 @@ def validar_mes():
     except ValueError:
         messagebox.showerror("Erro de Digitação!", "Digite um número inteiro para o mês.")
 
-botao_validar = tk.Button(janela, text="Validar", command=validar_mes)
-botao_validar.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
-
-janela.protocol("WM_DELETE_WINDOW", validar_mes)
-janela.mainloop()
-
-
-#conexão com banco de dados
-db = mysql.connector.connect(
-    host=###,
-    user=###,
-    password=###, 
-    database=###)
-
-cursor = db.cursor()
-
-nome_tabela = 'Mes' +  '_' + str(data)
-
-#executando comando para criar a tabela do mês no MySQL
-cursor.execute(f"""
-    CREATE TABLE IF NOT EXISTS {nome_tabela} (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        conta INT NOT NULL UNIQUE,
-        nome_nota VARCHAR(30) NOT NULL,
-        valor_total VARCHAR(15) NOT NULL,
-        juros VARCHAR(15),
-        data_vencimento VARCHAR (10) NOT NULL,
-        ref VARCHAR (2) NOT NULL,
-        data_emissao VARCHAR (10) NOT NULL,
-        id_drive VARCHAR(50) UNIQUE NOT NULL
-    );
-    """)
-
-db.commit()
-
-
-SCOPES = ["https://www.googleapis.com/auth/drive"] #escopo de permissão que o codigo tem sobre o drive
-SERVICE_ACCOUNT_FILE = 'CHAVES/token.json' #token para acesso drive
-SHARED_DRIVE_ID = #ID da pasta no drive para armazenar as NFs PRECISA SER TROCADO A CADA ANO!!!!
-
-
-#dicionario contendo XPATHs utilizados
-Portal_map = {
-    "buttons": {
-        "download":{
-            "xpath": "/html/body/center/form/table/tbody/tr[6]/td/input"
-        }
-    }
-}
-
-
-
-pasta_downloads = os.path.join(os.path.expanduser("~"), "Downloads") #declarando automaticamente o caminho até a pasta de downloads de qualquer maquina 
-
-
-#configurando o navegador
-chrome_options = Options()
-chrome_options.add_experimental_option("detach", True)
-#servico = Service(ChromeDriverManager().install()) #instalando o driver atual do chrome de forma automatica
-navegador = webdriver.Chrome(options=chrome_options)
 
 def reinciando(): #funçao para reiniciar o processo
     navegador.close() #fechando a aba de download
     navegador.switch_to.window(navegador.window_handles[0]) #voltando a controlar a tela de login do portal
     navegador.find_element(By.XPATH, '/html/body/center/a').click() #clicando no botao "reiniciar" para o processo de login
+
 
 def verificando_conta(conta): #funçao para selecionar as contas 
     combobox_contas = navegador.find_element(By.XPATH, "/html/body/table[2]/tbody/tr[2]/td/table/tbody/tr/td[6]/form/select")
@@ -122,6 +106,7 @@ def verificando_conta(conta): #funçao para selecionar as contas
         if option.text == conta:
             option.click()
             break
+
 
 def verificando_data(): #funçao para verificar as datas das opçoes disponiveis
     global fatura #declarando a variavel fatura (ela que diz se a fatura do mes atual está disponivel ou não)
@@ -150,25 +135,31 @@ def verificando_data(): #funçao para verificar as datas das opçoes disponiveis
             option.click()
             break
 
+
 def autenticar():  #autenticando as credenciais da API do drive
     creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     return creds
 
+
 def check_file_exists(file_name): #função para checar se a NF já está na pasta do drive
     creds = autenticar()
     service = build('drive', 'v3', credentials=creds)
+    page_token = None
 
     # Busca por arquivos com nome correspondente na pasta pai
     response = service.files().list(
-        supportsAllDrives=True, #parametro para incluir drivers compartilhados
+        supportsAllDrives=True, #parametro para incluir drivers compartilhadosq="mimeType='image/jpeg'",
         q=f"name = '{file_name}' and parents = '{SHARED_DRIVE_ID}'"
     ).execute()
+    
+    print(response)
 
     # Verifica se algum arquivo foi encontrado
     if response['files']:
         return True  # O arquivo existe no Drive
     else:
         return False  # O arquivo não existe no Drive
+    
 
 def arquivo_recente(): #função para pegar o arquivo mais recente na pasta downloads (ultima NF baixada)
     lista_arquivos = os.listdir(pasta_downloads) #listando o diretorio de downloads
@@ -184,6 +175,7 @@ def arquivo_recente(): #função para pegar o arquivo mais recente na pasta down
     lista_datas.sort(reverse=True)     
     global ultimo_arquivo
     ultimo_arquivo = lista_datas[0]
+
 
 def extração(): #função para extrair as informações (Total a pagar, Juros, Data de Emissão) das NFs
 
@@ -237,38 +229,16 @@ def extração(): #função para extrair as informações (Total a pagar, Juros,
         print(f"Valor total de juros: R$ {juros}")
     else:
         print("Valor total de juros não encontrado.")
+    
+    print('-'*20)
+
 
 def upload_drive(file_path): #função para realizar upload no drive
     creds = autenticar()
     service = build('drive', 'v3', credentials=creds)
-
-    #lista de contas com seus respectivos estados para nomear a NF
-    estados = [ (#, "SP"), (, "PA"), (, "BA"), (, "ES"), (, "SP"), 
-                (#, "RJ"), (, "MA"), (, "AM"), (, "PI"), (, "PE"), 
-                (#, "MG"), (, "CE") ]
-
-    #numero de conta e vencimento para nomear a NF
-    global nome_sql
-    global n_conta
-    global vencimento
-    n_conta = ultimo_arquivo[1].split("_")[0]
-    vencimento = ultimo_arquivo[1].split("_")[1]
-    referencia = ultimo_arquivo[1].split("_")[2]
-
-    #iterando sobre a lista de estados para ver qual é o estado da conta atual
-    for e in estados:
-        if e[0] == login:
-            estado = str(e[1])
-            
-    #nessa conta são NFs de serviços, mans nas outra sera seguranca
-    if login == :   
-        file_name = os.path.basename(f"{n_conta}_Claro GR Servico {estado}" + "_" + f"{vencimento}" + "_" + f"ref-{referencia}.pdf") #padrao para NF servico
-        nome_sql = (f"Claro GR Servico {estado}")
-    else:       
-        file_name = os.path.basename(f"{n_conta}_Claro GR Seguranca {estado}" + "_" + f"{vencimento}" + "_" + f"ref-{referencia}.pdf") #padrao para NF seguranca
-        nome_sql = (f"Claro GR Seguranca {estado}")
+    
     #chamando a função para checar a pasta no drive e evitar duplicação
-    if check_file_exists(file_name) == True:
+    if drive == False:
         print(f"O arquivo '{file_name}' já existe no Drive. Pulando envio.")
         return
 
@@ -285,29 +255,112 @@ def upload_drive(file_path): #função para realizar upload no drive
             media_body=file_path #informações do arquivo no drive
             ).execute()
         
-        #coletando o id do arquivo no drive para armazenar no banco de dados
         global file_id
         file_id = response['id']
+        print(f"Uploaded file ID: {file_id}")
+        
+        cursor.execute(f"""
+                UPDATE {nome_tabela}
+                SET id_drive = "{file_id}"
+                WHERE conta = "{n_conta}";
+                """)
+        db.commit()
+
 
 def insert_MySQL():
 
+    global drive
     #dando insert na tabela criado no MySQL
     try:
         cursor.execute(f"""
             INSERT INTO {nome_tabela} (
-                conta, nome_nota, valor_total, juros, data_vencimento, ref,  data_emissao, id_drive
+                conta, nome_nota, valor_total, juros, data_vencimento, ref,  data_emissao
             ) VALUES (
-                '{n_conta}', '{nome_sql}', '{valor_total}', '{juros}', '{vencimento}', '{data}', '{data_emissao}', '{file_id}'
+                '{n_conta}', '{nome_sql}', '{valor_total}', '{juros}', '{vencimento}', '{data}', '{data_emissao}'
             )
         """)
         db.commit()
+
+        drive = True
     except:
+        drive = False
         print(f"Nota já está no banco de dados")
+
 
 def remover_arquivo(): #funçao para remover o pdf da nota da pasta downloads
     path = (f'{pasta_downloads}/{ultimo_arquivo[1]}')
     if os.path.exists(path):
         os.remove(path)
+
+
+def rename_arquivo():
+    #lista de contas com seus respectivos estados para nomear a NF
+    estados = [ (#, "SP"), (, "PA"), (, "BA"), (, "ES"), (, "SP"), 
+                (#, "RJ"), (, "MA"), (, "AM"), (, "PI"), (, "PE"), 
+                (#, "MG"), (, "CE") ]
+
+    #numero de conta e vencimento para nomear a NF
+    global file_name
+    global nome_sql
+    global n_conta
+    global vencimento
+    global estado
+    global referencia
+    n_conta = ultimo_arquivo[1].split("_")[0]
+    vencimento = ultimo_arquivo[1].split("_")[1]
+    referencia = ultimo_arquivo[1].split("_")[2]
+
+    #iterando sobre a lista de estados para ver qual é o estado da conta atual
+    for e in estados:
+        if e[0] == login:
+            estado = str(e[1])
+            
+    #nessa conta são NFs de serviços, mans nas outra sera seguranca
+    if login == 215548000159:   
+        file_name = os.path.basename(f"{n_conta}_Claro_GR_Servico_{estado}_{vencimento}_ref-{referencia}.pdf") #padrao para NF servico
+        nome_sql = (f"Claro GR Serviço - {estado}")
+    else:       
+        file_name = os.path.basename(f"{n_conta}_Claro_GR_Seguranca_{estado}_{vencimento}_ref-{referencia}.pdf") #padrao para NF seguranca
+        nome_sql = (f"Claro GR Segurança - {estado}")
+
+
+#GUI para interação com o usuario 
+janela = tk.Tk()
+janela.title("Coleta de Mês para Notas")
+
+rotulo_mes = tk.Label(janela, text="Mês (1 a 12):")
+rotulo_mes.grid(row=0, column=0, padx=5, pady=5)
+
+entrada_mes = tk.Entry(janela)
+entrada_mes.grid(row=0, column=1, padx=5, pady=5)
+
+botao_validar = tk.Button(janela, text="Validar", command=validar_mes)
+botao_validar.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+janela.protocol("WM_DELETE_WINDOW", validar_mes)
+janela.mainloop()
+
+
+nome_tabela = 'Mes' +  '_' + str(data)
+
+#executando comando para criar a tabela do mês no MySQL
+cursor.execute(f"""
+    CREATE TABLE IF NOT EXISTS {nome_tabela} (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        conta INT NOT NULL UNIQUE,
+        nome_nota VARCHAR(30) NOT NULL,
+        valor_total VARCHAR(15) NOT NULL,
+        juros VARCHAR(15),
+        data_vencimento VARCHAR (10) NOT NULL,
+        ref VARCHAR (2) NOT NULL,
+        data_emissao VARCHAR (10) NOT NULL,
+        id_drive VARCHAR(50) UNIQUE 
+    );
+    """)
+
+db.commit()
+
+
 
 #abrindo o portal da claro 
 navegador.get("https://contaonline.claro.com.br/webbow/login/initPJ_oqe.do ")
@@ -321,10 +374,11 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
         navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[1]/input').send_keys(linha) #preenchendo o campo de login
         press('enter') #solucao para o pop up que aparece na tela de login
         sleep(1)
-        navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[2]/input').send_keys() #preenchendo a senha
+        navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[2]/input').send_keys(CLARO) #preenchendo a senha
         navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[3]/input').click() #dando ok para login
         sleep(3)
         navegador.switch_to.window(navegador.window_handles[1]) #mudando a aba para ser controlada
+        navegador.find_element(By.CLASS_NAME, 'close-btn').click()
         sleep(3)
         navegador.find_element(By.XPATH, '/html/body/table[1]/tbody/tr/td[1]/ul/table/tbody/tr/td[5]/li/a/img').click() #indo para gerenciamento
         (sleep(2))
@@ -332,19 +386,20 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
 
 
         #caso especifico de login com mais de uma fatura
-        if login == :
-            verificando_conta() #passsando o numero da conta para selecionar ela dentro do login
+        if login == #:
+            verificando_conta(#)
             sleep(2)
             verificando_data()
             if fatura == True: #se a primeira fatura não estiver disponivel ele vai selecionar a lista de faturas e ir para a segunda opção
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(10)
+                sleep(20)
                 arquivo_recente()
                 extração()
-                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                rename_arquivo()
                 insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta()
+            verificando_conta(#)
             sleep(1)
             verificando_data()
             if fatura == True: #se a segunda fatura não esiver disponivel ele vai selecionar a lista de faturas e ir para a primeira opção
@@ -352,16 +407,17 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                 sleep(10)
                 arquivo_recente()
                 extração()
-                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                rename_arquivo()
                 insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-                verificando_conta()
-                sleep(2)
+            verificando_conta(#)
+            sleep(2)
             reinciando()
 
         #caso especifico de login com mais de uma fatura
-        elif login == :
-            verificando_conta()
+        elif login == #:
+            verificando_conta(#)
             sleep(1)
             verificando_data()
             if fatura == True:
@@ -369,11 +425,11 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                 sleep(10)
                 arquivo_recente()
                 extração()
-                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                rename_arquivo()
                 insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-                sleep(2)
-            verificando_conta()
+            verificando_conta(#)
             sleep(1)
             verificando_data()
             if fatura == True:
@@ -381,11 +437,11 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                 sleep(10)
                 arquivo_recente()
                 extração()
-                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                rename_arquivo()
                 insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-                sleep(2)
-            verificando_conta()
+            verificando_conta(#)
             sleep(1)
             verificando_data()
             if fatura == True:
@@ -393,16 +449,17 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                 sleep(10)
                 arquivo_recente()
                 extração()
-                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                rename_arquivo()
                 insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-                verificando_conta()
-                sleep(2)
+            verificando_conta(#)
+            sleep(2)
             reinciando()
 
         #caso especifico de login com mais de uma fatura
-        elif login == :
-            verificando_conta()
+        elif login == #:
+            verificando_conta(#)
             sleep(2)
             verificando_data()
             if fatura == True:
@@ -410,11 +467,12 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                 sleep(10)
                 arquivo_recente()
                 extração()
-                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                rename_arquivo()
                 insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
                 sleep(2)
-            verificando_conta()
+            verificando_conta(#)
             sleep(2)
             verificando_data()
             if fatura == True:
@@ -422,10 +480,11 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                 sleep(10)
                 arquivo_recente()
                 extração()
-                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                rename_arquivo()
                 insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta()
+            verificando_conta(#)
             sleep(2)
             reinciando()
 
@@ -440,8 +499,9 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                     sleep(10)
                     arquivo_recente()
                     extração()
-                    upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                    rename_arquivo()
                     insert_MySQL()
+                    upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                     remover_arquivo()
                     reinciando()
                 except:

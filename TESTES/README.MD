@@ -1,3 +1,3 @@
 # PASTA DE TESTES
 
-Essa pasta fica responsavel por armazenar testes unitarios e melhorias do codigo antes de implementar na produção
+Essa pasta fica responsável por armazenar testes unitários e melhorias do código antes de implementar na produção
