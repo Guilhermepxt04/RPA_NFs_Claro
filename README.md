@@ -29,8 +29,8 @@ A parte do lançamento das informações coletadas foi feita de forma seperada
 - Git
 - Github
 
-# Metodologias e Principios
-- Desenvolvimento agil
+# Metodologias e Princípios
+- Desenvolvimento ágil
 - TDD (desenvolvimento orientado por testes)
 - Single Responsibility
 - Testes unitários 
