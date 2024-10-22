@@ -21,7 +21,6 @@ A parte do lançamento das informações coletadas foi feita de forma seperada
 ## Front end
 - Selenium (controle do navegador)
 - Tkinter (GUI)
-- Pyautogui (controle do teclado)
 ## Banco de dados
 - MySQL
 
