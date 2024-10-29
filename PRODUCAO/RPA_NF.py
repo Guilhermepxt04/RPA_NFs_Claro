@@ -11,8 +11,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from time import sleep 
-from pyautogui import press
-import pyautogui
 from datetime import datetime
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -52,7 +50,7 @@ cursor = db.cursor()
 
 
 SCOPES = ["https://www.googleapis.com/auth/drive"] #escopo de permissão que o codigo tem sobre o drive
-SERVICE_ACCOUNT_FILE = TOKEN #token para acesso drive
+SERVICE_ACCOUNT_FILE = 'RPA_CLARO/CHAVES/token.json' #token para acesso drive
 SHARED_DRIVE_ID = SHARED_DRIVE_ID #ID da pasta no drive para armazenar as NFs PRECISA SER TROCADO A CADA ANO!!!!
 
 
@@ -119,18 +117,18 @@ def verificando_data(): #funçao para verificar as datas das opçoes disponiveis
     #lendo todas opções disponiveis
     for option in options:
         final_option = option.text.split("/")[2] #pegando a parte final da opção (o ano e referencia estão nela)
-        ref_option = final_option.split(".")[1] #pegando a referenia da opção
+        mounth_option = option.text.split("/")[1] #pegando a referenia da opção
         year_option = final_option.split("-")[0] #pegando o ano da opção
         
         #transformando em inteiros para comparar as datas com as atuais
-        ref_option = int(ref_option)
+        mes_option = int(mounth_option)
         ano_option = int(year_option)
         
         #pegando ao ano atual
         ano_atual = datetime.now().year
         
         #se encontrar uma fatura com o mes que o usuario informou e ano atual vai selecionar ela para download
-        if ref_option == data and ano_option == ano_atual :
+        if mes_option == data and ano_option == ano_atual :
             fatura = True
             option.click()
             break
@@ -274,9 +272,9 @@ def insert_MySQL():
     try:
         cursor.execute(f"""
             INSERT INTO {nome_tabela} (
-                conta, nome_nota, valor_total, juros, data_vencimento, ref,  data_emissao
+                conta, nome_nota, valor_total, juros, data_vencimento, ref,  data_emissao, status
             ) VALUES (
-                '{n_conta}', '{nome_sql}', '{valor_total}', '{juros}', '{vencimento}', '{data}', '{data_emissao}'
+                '{n_conta}', '{nome_sql}', '{valor_total}', '{juros}', '{vencimento}', '{referencia}', '{data_emissao}', 'pendente'
             )
         """)
         db.commit()
@@ -289,15 +287,16 @@ def insert_MySQL():
 
 def remover_arquivo(): #funçao para remover o pdf da nota da pasta downloads
     path = (f'{pasta_downloads}/{ultimo_arquivo[1]}')
+    print(path)
     if os.path.exists(path):
         os.remove(path)
 
 
 def rename_arquivo():
     #lista de contas com seus respectivos estados para nomear a NF
-    estados = [ (#, "SP"), (, "PA"), (, "BA"), (, "ES"), (, "SP"), 
-                (#, "RJ"), (, "MA"), (, "AM"), (, "PI"), (, "PE"), 
-                (#, "MG"), (, "CE") ]
+    # estados = [ (, "SP"), (, "PA"), (, "BA"), (, "ES"), (, "SP"),
+                #  (, "RJ"), (, "MA"), (, "AM"), (, "PI"), (, "PE"), 
+                #  (, "MG"), (, "CE"),  (, "SP")}
 
     #numero de conta e vencimento para nomear a NF
     global file_name
@@ -311,12 +310,12 @@ def rename_arquivo():
     referencia = ultimo_arquivo[1].split("_")[2]
 
     #iterando sobre a lista de estados para ver qual é o estado da conta atual
-    for e in estados:
-        if e[0] == login:
-            estado = str(e[1])
+    #for e in estados:
+        #if e[0] == login:
+            #estado = str(e[1])
             
     #nessa conta são NFs de serviços, mans nas outra sera seguranca
-    if login == 215548000159:   
+    if login == '':   
         file_name = os.path.basename(f"{n_conta}_Claro_GR_Servico_{estado}_{vencimento}_ref-{referencia}.pdf") #padrao para NF servico
         nome_sql = (f"Claro GR Serviço - {estado}")
     else:       
@@ -354,7 +353,8 @@ cursor.execute(f"""
         data_vencimento VARCHAR (10) NOT NULL,
         ref VARCHAR (2) NOT NULL,
         data_emissao VARCHAR (10) NOT NULL,
-        id_drive VARCHAR(50) UNIQUE 
+        id_drive VARCHAR(50) UNIQUE,
+        status VARCHAR (10) NOT NULL 
     );
     """)
 
@@ -362,23 +362,33 @@ db.commit()
 
 
 
+
+
 #abrindo o portal da claro 
 navegador.get("https://contaonline.claro.com.br/webbow/login/initPJ_oqe.do ")
 
+
 #abrindo o arquivo com os logins
-with open("PRODUCAO/claro.txt", 'r') as arquivo:
+with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
     for linha in arquivo:
-        login = int(linha) #armezando a linha atual em uma variavel int para verificar se é um login com mais de uma fatura para baixar
+        login_cnpj = False
+        print(linha)
+        print(type(linha))
+        if linha == '' or linha == '' or linha == '': #casos especificos onde o login é feito pelo CNPJ
+            login = linha
+            login_cnpj = True
+        else:
+            login = int(linha) #armezando a linha atual em uma variavel int para verificar se é um login com mais de uma fatura para baixar
 
         #logando no portal e indo para a aba de downloads
-        navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[1]/input').send_keys(linha) #preenchendo o campo de login
-        press('enter') #solucao para o pop up que aparece na tela de login
-        sleep(1)
         navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[2]/input').send_keys(CLARO) #preenchendo a senha
-        navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[3]/input').click() #dando ok para login
-        sleep(3)
+        navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[1]/input').send_keys(linha) #preenchendo o campo de login
+        sleep(1)
         navegador.switch_to.window(navegador.window_handles[1]) #mudando a aba para ser controlada
-        navegador.find_element(By.CLASS_NAME, 'close-btn').click()
+        if      login_cnpj == True:
+            None
+        else:
+            navegador.find_element(By.CLASS_NAME, 'close-btn').click()
         sleep(3)
         navegador.find_element(By.XPATH, '/html/body/table[1]/tbody/tr/td[1]/ul/table/tbody/tr/td[5]/li/a/img').click() #indo para gerenciamento
         (sleep(2))
@@ -386,85 +396,119 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
 
 
         #caso especifico de login com mais de uma fatura
-        if login == #:
-            verificando_conta(#)
+        if login == '':
+            verificando_conta('')
+            sleep(2)
+            verificando_data()
+            if fatura == True:
+                navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
+                sleep(7)
+                arquivo_recente()
+                extração()
+                rename_arquivo()
+                insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                remover_arquivo()
+            sleep(2)
+            reinciando()
+        
+        elif login == '':
+            verificando_conta('')
+            sleep(2)
+            verificando_data()
+            if fatura == True:
+                navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
+                sleep(7)
+                arquivo_recente()
+                extração()
+                rename_arquivo()
+                insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                remover_arquivo()
+            sleep(2)
+            reinciando()
+        
+        elif login == '':  
+            verificando_conta('')
             sleep(2)
             verificando_data()
             if fatura == True: #se a primeira fatura não estiver disponivel ele vai selecionar a lista de faturas e ir para a segunda opção
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(20)
+                sleep(7)
                 arquivo_recente()
                 extração()
                 rename_arquivo()
                 insert_MySQL()
                 upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta(#)
-            sleep(1)
+            verificando_conta('')
+            sleep(2)
             verificando_data()
             if fatura == True: #se a segunda fatura não esiver disponivel ele vai selecionar a lista de faturas e ir para a primeira opção
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(10)
+                sleep(7)
                 arquivo_recente()
                 extração()
                 rename_arquivo()
                 insert_MySQL()
                 upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta(#)
+            verificando_conta('')
             sleep(2)
             reinciando()
 
         #caso especifico de login com mais de uma fatura
-        elif login == #:
-            verificando_conta(#)
-            sleep(1)
+        elif login == '':
+            verificando_conta('')
+            sleep(2)
             verificando_data()
             if fatura == True:
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(10)
+                sleep(7)
                 arquivo_recente()
                 extração()
                 rename_arquivo()
                 insert_MySQL()
                 upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta(#)
             sleep(1)
+            verificando_conta('')
+            sleep(2)
             verificando_data()
             if fatura == True:
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(10)
+                sleep(7)
                 arquivo_recente()
                 extração()
                 rename_arquivo()
                 insert_MySQL()
                 upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta(#)
             sleep(1)
+            verificando_conta('')
+            sleep(4)
             verificando_data()
             if fatura == True:
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(10)
+                sleep(7)
                 arquivo_recente()
                 extração()
                 rename_arquivo()
                 insert_MySQL()
                 upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta(#)
+            verificando_conta('')
             sleep(2)
             reinciando()
 
         #caso especifico de login com mais de uma fatura
-        elif login == #:
-            verificando_conta(#)
+        elif login == '':
+            verificando_conta('')
             sleep(2)
             verificando_data()
             if fatura == True:
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(10)
+                sleep(7)
                 arquivo_recente()
                 extração()
                 rename_arquivo()
@@ -472,20 +516,52 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
                 upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
                 sleep(2)
-            verificando_conta(#)
+            verificando_conta('')
             sleep(2)
             verificando_data()
             if fatura == True:
                 navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                sleep(10)
+                sleep(7)
                 arquivo_recente()
                 extração()
                 rename_arquivo()
                 insert_MySQL()
                 upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
                 remover_arquivo()
-            verificando_conta(#)
+            verificando_conta('')
             sleep(2)
+            reinciando()
+
+        elif login == '':
+            verificando_conta('')
+            sleep(2)
+            verificando_data()
+            if fatura == True:
+                navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
+                sleep(7)
+                arquivo_recente()
+                extração()
+                rename_arquivo()
+                insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                remover_arquivo()
+                sleep(2)
+            reinciando()
+
+        elif login == '':
+            verificando_conta('')
+            sleep(2)
+            verificando_data()
+            if fatura == True:
+                navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
+                sleep(7)
+                arquivo_recente()
+                extração()
+                rename_arquivo()
+                insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                remover_arquivo()
+                sleep(2)
             reinciando()
 
         #caso padrao de apenas uma fatura no login
@@ -496,7 +572,7 @@ with open("PRODUCAO/claro.txt", 'r') as arquivo:
             else: #se tiver uma disponivel ele confirma cliando em ok e depois volta para a aba de login
                 try:
                     navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
-                    sleep(10)
+                    sleep(7)
                     arquivo_recente()
                     extração()
                     rename_arquivo()
