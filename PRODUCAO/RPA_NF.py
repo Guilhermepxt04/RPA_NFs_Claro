@@ -50,7 +50,7 @@ cursor = db.cursor()
 
 
 SCOPES = ["https://www.googleapis.com/auth/drive"] #escopo de permissão que o codigo tem sobre o drive
-SERVICE_ACCOUNT_FILE = 'RPA_CLARO/CHAVES/token.json' #token para acesso drive
+SERVICE_ACCOUNT_FILE = '.venv/CHAVES/token.json' #token para acesso drive
 SHARED_DRIVE_ID = SHARED_DRIVE_ID #ID da pasta no drive para armazenar as NFs PRECISA SER TROCADO A CADA ANO!!!!
 
 
@@ -139,25 +139,6 @@ def autenticar():  #autenticando as credenciais da API do drive
     return creds
 
 
-def check_file_exists(file_name): #função para checar se a NF já está na pasta do drive
-    creds = autenticar()
-    service = build('drive', 'v3', credentials=creds)
-    page_token = None
-
-    # Busca por arquivos com nome correspondente na pasta pai
-    response = service.files().list(
-        supportsAllDrives=True, #parametro para incluir drivers compartilhadosq="mimeType='image/jpeg'",
-        q=f"name = '{file_name}' and parents = '{SHARED_DRIVE_ID}'"
-    ).execute()
-    
-    print(response)
-
-    # Verifica se algum arquivo foi encontrado
-    if response['files']:
-        return True  # O arquivo existe no Drive
-    else:
-        return False  # O arquivo não existe no Drive
-    
 
 def arquivo_recente(): #função para pegar o arquivo mais recente na pasta downloads (ultima NF baixada)
     lista_arquivos = os.listdir(pasta_downloads) #listando o diretorio de downloads
@@ -294,9 +275,9 @@ def remover_arquivo(): #funçao para remover o pdf da nota da pasta downloads
 
 def rename_arquivo():
     #lista de contas com seus respectivos estados para nomear a NF
-    # estados = [ (, "SP"), (, "PA"), (, "BA"), (, "ES"), (, "SP"),
-                #  (, "RJ"), (, "MA"), (, "AM"), (, "PI"), (, "PE"), 
-                #  (, "MG"), (, "CE"),  (, "SP")}
+    estados = [ (numero da conta, "SP"), (, "PA"), (, "BA"), (, "ES"), (, "SP"), 
+                (, "RJ"), (, "MA"), (, "AM"), (, "PI"), ('', "PE"), 
+                (, "MG"), ('', "CE"),  ('', "SP")]
 
     #numero de conta e vencimento para nomear a NF
     global file_name
@@ -310,12 +291,12 @@ def rename_arquivo():
     referencia = ultimo_arquivo[1].split("_")[2]
 
     #iterando sobre a lista de estados para ver qual é o estado da conta atual
-    #for e in estados:
-        #if e[0] == login:
-            #estado = str(e[1])
+    for e in estados:
+        if e[0] == login:
+            estado = str(e[1])
             
     #nessa conta são NFs de serviços, mans nas outra sera seguranca
-    if login == '':   
+    if login == 'numero da conta serviços da gr':   
         file_name = os.path.basename(f"{n_conta}_Claro_GR_Servico_{estado}_{vencimento}_ref-{referencia}.pdf") #padrao para NF servico
         nome_sql = (f"Claro GR Serviço - {estado}")
     else:       
@@ -369,14 +350,15 @@ navegador.get("https://contaonline.claro.com.br/webbow/login/initPJ_oqe.do ")
 
 
 #abrindo o arquivo com os logins
-with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
+with open(".venv/PRODUCAO/claro.txt", 'r') as arquivo:
     for linha in arquivo:
+
+        #logica para verificar se está utilizando o CNPJ para o login, pois a interface no começo do portal é um pouco diferente nesse metodo
         login_cnpj = False
-        print(linha)
-        print(type(linha))
-        if linha == '' or linha == '' or linha == '': #casos especificos onde o login é feito pelo CNPJ
+        if linha == '' or linha == '' or linha == '':
             login = linha
             login_cnpj = True
+
         else:
             login = int(linha) #armezando a linha atual em uma variavel int para verificar se é um login com mais de uma fatura para baixar
 
@@ -388,7 +370,10 @@ with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
         if      login_cnpj == True:
             None
         else:
-            navegador.find_element(By.CLASS_NAME, 'close-btn').click()
+            try:
+                navegador.find_element(By.CLASS_NAME, 'close-btn').click()
+            except:
+                None
         sleep(3)
         navegador.find_element(By.XPATH, '/html/body/table[1]/tbody/tr/td[1]/ul/table/tbody/tr/td[5]/li/a/img').click() #indo para gerenciamento
         (sleep(2))
@@ -396,8 +381,8 @@ with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
 
 
         #caso especifico de login com mais de uma fatura
-        if login == '':
-            verificando_conta('')
+        if login == :
+            verificando_conta('numero da conta')
             sleep(2)
             verificando_data()
             if fatura == True:
@@ -412,7 +397,7 @@ with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
             sleep(2)
             reinciando()
         
-        elif login == '':
+        elif login == :
             verificando_conta('')
             sleep(2)
             verificando_data()
@@ -458,7 +443,7 @@ with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
             reinciando()
 
         #caso especifico de login com mais de uma fatura
-        elif login == '':
+        elif login == 110798646:
             verificando_conta('')
             sleep(2)
             verificando_data()
@@ -532,7 +517,7 @@ with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
             sleep(2)
             reinciando()
 
-        elif login == '':
+        elif login == :
             verificando_conta('')
             sleep(2)
             verificando_data()
@@ -548,7 +533,7 @@ with open("RPA_CLARO/PRODUCAO/claro.txt", 'r') as arquivo:
                 sleep(2)
             reinciando()
 
-        elif login == '':
+        elif login == :
             verificando_conta('')
             sleep(2)
             verificando_data()
