@@ -94,7 +94,7 @@ def reinciando(): #funçao para reiniciar o processo
     navegador.find_element(By.XPATH, '/html/body/center/a').click() #clicando no botao "reiniciar" para o processo de login
 
 
-def verificando_conta(conta): #funçao para selecionar as contas 
+def verificando_conta(conta): #funçao para selecionar as contas dentro da combobox
     combobox_contas = navegador.find_element(By.XPATH, "/html/body/table[2]/tbody/tr[2]/td/table/tbody/tr/td[6]/form/select")
     combobox_contas.click()
     options_contas = combobox_contas.find_elements(By.TAG_NAME, "option")
@@ -234,6 +234,7 @@ def upload_drive(file_path): #função para realizar upload no drive
             media_body=file_path #informações do arquivo no drive
             ).execute()
         
+        #salvando id no banco de dados para consultar e baixar o pdf certo na hora do lançamento
         global file_id
         file_id = response['id']
         print(f"Uploaded file ID: {file_id}")
@@ -275,9 +276,7 @@ def remover_arquivo(): #funçao para remover o pdf da nota da pasta downloads
 
 def rename_arquivo():
     #lista de contas com seus respectivos estados para nomear a NF
-    estados = [ (numero da conta, "SP"), (, "PA"), (, "BA"), (, "ES"), (, "SP"), 
-                (, "RJ"), (, "MA"), (, "AM"), (, "PI"), ('', "PE"), 
-                (, "MG"), ('', "CE"),  ('', "SP")]
+    estados = [ (, 'SP'), (), ...]
 
     #numero de conta e vencimento para nomear a NF
     global file_name
@@ -296,7 +295,7 @@ def rename_arquivo():
             estado = str(e[1])
             
     #nessa conta são NFs de serviços, mans nas outra sera seguranca
-    if login == 'numero da conta serviços da gr':   
+    if login == '\n':   
         file_name = os.path.basename(f"{n_conta}_Claro_GR_Servico_{estado}_{vencimento}_ref-{referencia}.pdf") #padrao para NF servico
         nome_sql = (f"Claro GR Serviço - {estado}")
     else:       
@@ -349,13 +348,12 @@ db.commit()
 navegador.get("https://contaonline.claro.com.br/webbow/login/initPJ_oqe.do ")
 
 
-#abrindo o arquivo com os logins
+#abrindo o arquivo com os logins e verificando se é atravez do cnpj, pois com cnpj segue uma logica diferente
 with open(".venv/PRODUCAO/claro.txt", 'r') as arquivo:
     for linha in arquivo:
-
-        #logica para verificar se está utilizando o CNPJ para o login, pois a interface no começo do portal é um pouco diferente nesse metodo
         login_cnpj = False
-        if linha == '' or linha == '' or linha == '':
+
+        if linha == '\n' or linha == '\n' or linha == '\n':
             login = linha
             login_cnpj = True
 
@@ -367,13 +365,14 @@ with open(".venv/PRODUCAO/claro.txt", 'r') as arquivo:
         navegador.find_element(By.XPATH, '/html/body/form/table/tbody/tr[2]/td[1]/input').send_keys(linha) #preenchendo o campo de login
         sleep(1)
         navegador.switch_to.window(navegador.window_handles[1]) #mudando a aba para ser controlada
-        if      login_cnpj == True:
+
+        if login_cnpj == True:
             None
         else:
             try:
                 navegador.find_element(By.CLASS_NAME, 'close-btn').click()
-            except:
-                None
+            except Exception as e: 
+                print(f"Erro ao fechar o elemento: {e}") 
         sleep(3)
         navegador.find_element(By.XPATH, '/html/body/table[1]/tbody/tr/td[1]/ul/table/tbody/tr/td[5]/li/a/img').click() #indo para gerenciamento
         (sleep(2))
@@ -382,7 +381,7 @@ with open(".venv/PRODUCAO/claro.txt", 'r') as arquivo:
 
         #caso especifico de login com mais de uma fatura
         if login == :
-            verificando_conta('numero da conta')
+            verificando_conta('')
             sleep(2)
             verificando_data()
             if fatura == True:
@@ -413,7 +412,7 @@ with open(".venv/PRODUCAO/claro.txt", 'r') as arquivo:
             sleep(2)
             reinciando()
         
-        elif login == '':  
+        elif login == '\n':  
             verificando_conta('')
             sleep(2)
             verificando_data()
@@ -443,7 +442,7 @@ with open(".venv/PRODUCAO/claro.txt", 'r') as arquivo:
             reinciando()
 
         #caso especifico de login com mais de uma fatura
-        elif login == 110798646:
+        elif login == :
             verificando_conta('')
             sleep(2)
             verificando_data()
@@ -485,9 +484,26 @@ with open(".venv/PRODUCAO/claro.txt", 'r') as arquivo:
             verificando_conta('')
             sleep(2)
             reinciando()
+            
+        #caso especifico de login com mais de uma fatura
+        elif login == :
+            verificando_conta('')
+            sleep(2)
+            verificando_data()
+            if fatura == True:
+                navegador.find_element(By.XPATH, Portal_map['buttons']["download"]["xpath"]).click() #clicando em ok para download
+                sleep(7)
+                arquivo_recente()
+                extração()
+                rename_arquivo()
+                insert_MySQL()
+                upload_drive(f"{pasta_downloads}/{ultimo_arquivo[1]}")
+                remover_arquivo()
+            sleep(2)
+            reinciando()
 
         #caso especifico de login com mais de uma fatura
-        elif login == '':
+        elif login == '\n':
             verificando_conta('')
             sleep(2)
             verificando_data()
