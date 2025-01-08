@@ -18,8 +18,6 @@ import os
 import fitz
 import re
 import mysql.connector
-import tkinter as tk
-from tkinter import messagebox
 from dotenv import load_dotenv
 
 #VARIAVEIS DE AMBIENTE
@@ -72,21 +70,6 @@ chrome_options = Options()
 chrome_options.add_experimental_option("detach", True)
 #servico = Service(ChromeDriverManager().install()) #instalando o driver atual do chrome de forma automatica
 navegador = webdriver.Chrome(options=chrome_options)
-
-
-def validar_mes():
-    try:
-        global data
-        data = int(entrada_mes.get())
-        if 1 <= data <= 12:
-            # Mês válido, prosseguir com a lógica do programa
-            print(f"Mês selecionado: {data}")
-            janela.destroy()  # Fechar a janela após a validação
-        else:
-            messagebox.showerror("Mês Inválido!", "Por favor, digite um mês entre 1 e 12.")
-    except ValueError:
-        messagebox.showerror("Erro de Digitação!", "Digite um número inteiro para o mês.")
-
 
 def reinciando(): #funçao para reiniciar o processo
     navegador.close() #fechando a aba de download
@@ -302,23 +285,7 @@ def rename_arquivo():
         file_name = os.path.basename(f"{n_conta}_Claro_GR_Seguranca_{estado}_{vencimento}_ref-{referencia}.pdf") #padrao para NF seguranca
         nome_sql = (f"Claro GR Segurança - {estado}")
 
-
-#GUI para interação com o usuario 
-janela = tk.Tk()
-janela.title("Coleta de Mês para Notas")
-
-rotulo_mes = tk.Label(janela, text="Mês (1 a 12):")
-rotulo_mes.grid(row=0, column=0, padx=5, pady=5)
-
-entrada_mes = tk.Entry(janela)
-entrada_mes.grid(row=0, column=1, padx=5, pady=5)
-
-botao_validar = tk.Button(janela, text="Validar", command=validar_mes)
-botao_validar.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
-
-janela.protocol("WM_DELETE_WINDOW", validar_mes)
-janela.mainloop()
-
+data = datetime.now().month
 
 nome_tabela = 'Mes' +  '_' + str(data)
 

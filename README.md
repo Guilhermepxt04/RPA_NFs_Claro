@@ -20,7 +20,6 @@ A parte do lançamento das informações coletadas foi feita de forma seperada
 - Os (controle do sistema operacional)
 ## Front end
 - Selenium (controle do navegador)
-- Tkinter (GUI)
 ## Banco de dados
 - MySQL
 
