@@ -39,8 +39,8 @@ Guilherme Peixoto Carvalho
 www.linkedin.com/in/guilherme-peixoto-266038208
 
 # Agradecimentos 
-- Empresa Grupo GR (https://www.linkedin.com/company/grupo-gr/mycompany/)
-- Julio Ribeiro Duarte (https://www.linkedin.com/in/julio-ribeiro-duarte/)
-- Maycow Pelegrini (https://www.linkedin.com/in/maycow-pelegrini/)
+- [Empresa Grupo GR](https://www.linkedin.com/company/grupo-gr/mycompany/)
+- [Julio Ribeiro Duarte](https://www.linkedin.com/in/julio-ribeiro-duarte/)
+- [Maycow Pelegrini](https://www.linkedin.com/in/maycow-pelegrini/)
 
 
