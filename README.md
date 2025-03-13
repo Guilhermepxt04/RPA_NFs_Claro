@@ -29,10 +29,7 @@ A parte do lançamento das informações coletadas foi feita de forma seperada
 
 # Metodologias e Princípios
 - Desenvolvimento ágil
-- TDD (desenvolvimento orientado por testes)
-- Single Responsibility
-- Testes unitários 
-- Testes integrados
+- SOLID
 
 
 # Autor
@@ -44,5 +41,6 @@ www.linkedin.com/in/guilherme-peixoto-266038208
 # Agradecimentos 
 - Empresa Grupo GR (https://www.linkedin.com/company/grupo-gr/mycompany/)
 - Julio Ribeiro Duarte (https://www.linkedin.com/in/julio-ribeiro-duarte/)
+- Maycow Pelegrini (https://www.linkedin.com/in/maycow-pelegrini/)
 
 
