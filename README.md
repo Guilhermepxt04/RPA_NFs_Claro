@@ -3,7 +3,7 @@
 
 # Sobre o projeto
 
-Este RPA foi feito para coletar notas fiscais de um portal da [Claro](https://contaonline.claro.com.br/webbow/login/initPJ_oqe.do) 
+Este RPA foi feito para coletar notas fiscais de um portal da [Claro](https://contaonline.claro.com.br/webbow/login/initPJ_oqe.do), 
 extraindo/armazenando seus dados e fazer seu lançamento, feito quando identifiquei uma dor que consumia tempo na empresa que sou colaborador
 
 O repositório publicado é apenas uma demo do projeto, pois o mesmo funcional e em produção não pode estar público 
