@@ -34,7 +34,7 @@ A parte do lançamento das informações coletadas foi feita de forma seperada
 
 # Autor
 
-[Guilherme Peixoto Carvalho](www.linkedin.com/in/guilherme-peixoto-dev)
+[Guilherme Peixoto Carvalho](https://www.linkedin.com/in/guilherme-peixoto-dev/)
 
 # Agradecimentos 
 - [Empresa Grupo GR](https://www.linkedin.com/company/grupo-gr/mycompany/)
